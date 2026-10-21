@@ -12,7 +12,7 @@ import { contactType } from "./enum.js";
 import { sql } from "drizzle-orm";
 
 export const contacts = pgTable(
-  "contsct",
+  "contacts",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     businessId: uuid("business_id")
