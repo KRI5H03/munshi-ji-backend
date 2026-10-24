@@ -33,7 +33,7 @@ export const ledgerEntryType = pgEnum("ledger_entry_type", [
   "purchase",
   "credit_note",
   "debit_note",
-  "payment_recieved",
+  "payment_received",
   "payment_paid",
   "cancel",
 ]);
