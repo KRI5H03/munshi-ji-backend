@@ -46,3 +46,19 @@ Schema and rounding rules live in DECISIONS.md.
 - 7 of 12 tables.
 
 **Next:** invoices.ts columns, group by group.
+
+## Day 4 — Sat 24 Oct 2026 (ran to 1:30am)
+
+- All 12 tables written: invoices, invoice_lines, invoice_tax_summary,
+  stock_movements, ledger_entries, audit_logs, plus schema/index.ts.
+- drizzle.config.ts + first migration. 12 tables live in Postgres.
+- Bugs caught before migration: serial_rule required a serial on
+  purchases (would have rejected every purchase bill); payment_mode
+  check was inverted (would have rejected every sale's ledger entry);
+  invoiceId notNull on ledger and stock (would have blocked payments
+  and opening stock). tsc saw none of them.
+- Raw SQL in checks caused 3 bugs across 2 files. Use ${table.x}.
+- Learned: why tax summary is stored (it's what was charged and filed);
+  composite index column order; polymorphic audit reference.
+
+**Next:** src/core/money.ts + tests. Then gst.ts against both real bills.
