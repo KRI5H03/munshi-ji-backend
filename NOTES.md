@@ -36,3 +36,13 @@ Schema and rounding rules live in DECISIONS.md.
   why email format belongs in Zod but uniqueness belongs in the DB.
 
 **Next:** src/db/schema/items.ts — stock_qty needs CHECK >= 0.
+
+## Day 3 — Thu 22 Oct 2026
+
+- items.ts — CHECK stock >= 0, unique design_no per business (case-insensitive).
+- doc_counters.ts — unique on (business, doc_type, fy); CHECK blocks purchase.
+- invoices.ts — imports only.
+- Ekadashi fast + 8 lectures. Stopped early. Fri off, Sat morning recovery.
+- 7 of 12 tables.
+
+**Next:** invoices.ts columns, group by group.
