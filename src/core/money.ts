@@ -28,7 +28,7 @@ export function formatPaise(paise: number): string {
 }
 
 function divideRoundHalf(numerator: number, denominator: number): number {
-  if (denominator <= 0) {
+  if (!(denominator > 0 && Number.isSafeInteger(denominator))) {
     throw new Error(
       `divideRoundHalf: invalid denominator ${denominator}. Expected a whole number > 0.`,
     );
@@ -51,8 +51,8 @@ export function applyPercentMilli(
   if (
     !(
       Number.isSafeInteger(percentMilli) &&
-      percentMilli > 0 &&
-      percentMilli < 100000
+      percentMilli >= 0 &&
+      percentMilli <= 100000
     )
   ) {
     throw new Error(
@@ -69,7 +69,7 @@ export function applyBasisPoints(amount: number, bp: number): number {
       `applyBasisPoints: invalid amount ${amount}. Expected a whole number >= 0.`,
     );
   }
-  if (!(Number.isSafeInteger(bp) && bp > 0 && bp < 100000)) {
+  if (!(Number.isSafeInteger(bp) && bp >= 0 && bp <= 10000)) {
     throw new Error(`applyBasisPoints: invalid bp ${bp}. Expected 0 to 10000.`);
   }
   return divideRoundHalf(amount * bp, 10000);
@@ -79,7 +79,7 @@ export function roundToRupee(paise: number): {
   total: number;
   roundOff: number;
 } {
-  if (!Number.isSafeInteger(paise) && paise < 0) {
+  if (!(Number.isSafeInteger(paise) && paise >= 0)) {
     throw new Error(
       `roundToRupee: invalid paise ${paise}. Expected a whole number >= 0.`,
     );
