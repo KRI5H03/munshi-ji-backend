@@ -62,3 +62,24 @@ Schema and rounding rules live in DECISIONS.md.
   composite index column order; polymorphic audit reference.
 
 **Next:** src/core/money.ts + tests. Then gst.ts against both real bills.
+
+## Day 5 — Sun 25 Oct 2026
+
+- src/core/money.ts — 5 functions: rupeesToPaise, formatPaise,
+  applyPercentMilli, applyBasisPoints, roundToRupee, plus private
+  divideRoundHalf (quotient + remainder, no floats ever).
+- tests/unit/money.test.ts — 27 tests, all passing. Every expected
+  value comes from a real bill or a hand calculation.
+- Rounding now matches father's software exactly on all three bills
+  (test bill, BHOLA COLLECTION, BHOLA SALES).
+- Tests caught 2 missing guards, then 4 more bugs I introduced
+  while fixing them.
+- My recurring mistake: guard conditions written backwards (good case
+  where the bad case belongs, && vs ||). Fix: inside if (!( ... )) always
+  describe the GOOD value; try one good and one bad value before saving.
+- Copy-paste between similar functions caused bp <= 100000.
+  Now going one function at a time, explained in words first.
+- Learned: regex basics, padStart vs padEnd, toBe vs toEqual,
+  why toThrow needs () =>, De Morgan's law, half-up vs banker's rounding.
+
+**Next:** src/core/fy.ts — getFinancialYear. Spec is in chat.
