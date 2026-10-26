@@ -1,5 +1,7 @@
+export const dateRules = /^\d{4}-\d{2}-\d{2}$/;
+
 export function getFinancialYear(date: string): string {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date))
+  if (!dateRules.test(date))
     throw new Error(
       `getFinancialYear: invalid date ${date}. Expected YYYY-MM-DD.`,
     );
