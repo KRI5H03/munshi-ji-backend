@@ -83,3 +83,18 @@ Schema and rounding rules live in DECISIONS.md.
   why toThrow needs () =>, De Morgan's law, half-up vs banker's rounding.
 
 **Next:** src/core/fy.ts — getFinancialYear. Spec is in chat.
+
+## Day 6 — Mon 26 Oct 2026
+
+- src/core/fy.ts — getFinancialYear. 1 Apr / 31 Mar boundaries tested.
+  Parses the date string; no JS Date (timezone risk).
+- src/config/gstRules.ts — rate chart with effective dates.
+  5% ≤ ₹2,500 / 18% above from 22 Sep 2025; old 1,000/12% row kept.
+- src/core/gst.ts — getGstRateBp. Picks the row covering the bill date.
+- 43 tests passing.
+- DECIDED: discounted value picks the GST rate AND is what gets taxed.
+  Closes open question #2. Still confirm with CA before launch.
+- Note for invoice service: per-piece value = line taxable ÷ qty must
+  round UP, or ₹2,500.0011 wrongly becomes 5%.
+
+**Next:** src/core/discount.ts — discount apportionment.
