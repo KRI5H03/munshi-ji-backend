@@ -98,3 +98,13 @@ Schema and rounding rules live in DECISIONS.md.
   round UP, or ₹2,500.0011 wrongly becomes 5%.
 
 **Next:** src/core/discount.ts — discount apportionment.
+
+## Day 7 — Sun 1 Nov 2026 (after midnight)
+
+- apportionDiscount done (round 2 + guards written with AI help —
+  re-read and explain it in my own words this week).
+- Largest remainder method: whole shares first, leftover paise to
+  the biggest remainders, ties to the earlier line.
+- 55 tests passing.
+
+**Next:** src/core/tax.ts — group lines by HSN + rate, compute CGST/SGST/IGST.
