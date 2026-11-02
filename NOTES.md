@@ -108,3 +108,19 @@ Schema and rounding rules live in DECISIONS.md.
 - 55 tests passing.
 
 **Next:** src/core/tax.ts — group lines by HSN + rate, compute CGST/SGST/IGST.
+
+## Day 8 — Mon 2 Nov 2026 (ran to midnight)
+
+- src/core/tax.ts — computeTaxSummary. Groups lines by HSN + rate
+  using a Map (group-and-sum pattern), taxes once per group.
+  Same state → CGST + SGST at half rate each; other state → IGST.
+- Learned Map from scratch: has / get / set, string keys like
+  "62114290|500" (object keys compare by reference, strings by value).
+- IGST can be 1 paisa more than CGST + SGST — rounding once vs twice.
+  Expected, not a bug.
+- Caught myself reading placeholder output as a pass. Check the
+  numbers are mine, not the dummy ones.
+- 63 tests passing. Core bill maths complete.
+
+**Next:** two small core helpers — formatInvoiceNo, then amountInWords.
+After that, core/ is done and we start auth.
