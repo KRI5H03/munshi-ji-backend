@@ -124,3 +124,19 @@ Schema and rounding rules live in DECISIONS.md.
 
 **Next:** two small core helpers — formatInvoiceNo, then amountInWords.
 After that, core/ is done and we start auth.
+
+## Day 9 — Tue 3 Nov 2026
+
+- core/invoiceNumber.ts — formatInvoiceNo. serial must be a number:
+  as a string, "023" passed the guard but printed "023/2026-27".
+- core/amountInWords.ts — twoDigitWords helper, then amountInWords.
+  Indian grouping: crore / lakh / thousand / hundred / rest.
+  Build a list of non-empty parts and join once — no stray spaces.
+- Bugs caught: trailing space on "Twenty "; guard allowed 100;
+  / and % swapped on the thousand line; "Lakhs"; raw "50 Paise".
+- Read the stack trace line number instead of guessing the line.
+- 86 tests passing. core/ COMPLETE — every number and word on the
+  bill comes from tested code.
+
+**Next:** auth — users + user_businesses, register / login with
+bcrypt + JWT, then tenant middleware.
