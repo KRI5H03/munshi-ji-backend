@@ -140,3 +140,37 @@ After that, core/ is done and we start auth.
 
 **Next:** auth — users + user_businesses, register / login with
 bcrypt + JWT, then tenant middleware.
+
+## Day 10 — Fri 6 Nov 2026 (on the train)
+
+- Fever Thu–Fri; worked on the train once well.
+- validators/auth.validator.ts — registerSchema + loginSchema (Zod).
+  GSTIN regex; trim + toUpperCase before regex; login password min 1
+  (not 8) so rule changes never lock anyone out.
+- utils/password.ts — hashPassword / verifyPassword (bcrypt, cost 12).
+  72-byte guard uses Buffer.byteLength, not .length.
+- utils/jwt.ts — signToken / verifyToken. Payload holds only the user id;
+  algorithm pinned to HS256 on both sides. Forged payload rejected.
+- 109 tests passing.
+- 7–10 Nov: travel, Diwali, rest. No code.
+
+**Next:** auth.service — register (3-row transaction).
+
+## Day 11 — Wed 11 Nov 2026
+
+- auth.service: register (user + business + owner link in one transaction)
+  and login (lowercased email, same error for unknown email and wrong
+  password, join to list the user's firms).
+- Routes + controllers: POST /auth/register, POST /auth/login,
+  GET /auth/me, GET /businesses/current. Tested end to end with curl.
+- Middleware: requireAuth (Bearer token → req.userId),
+  requireTenant (X-Business-Id → checked in user_businesses → req.businessId).
+- By AI: AppError, error middleware, validateBody — one error shape everywhere.
+- Proved isolation: valid login + another firm's id → 403.
+- Bugs: email not lowercased; loginSchema not imported (server crashed —
+  check the dev terminal first); header name had an underscore.
+- Learned: 401 vs 403, try/catch, user enumeration, controller vs service,
+  status 201 vs 200.
+- Phase 1 (auth + tenancy) DONE.
+
+**Next:** contacts — validator, createContact service, POST /contacts.
