@@ -1,5 +1,6 @@
 import express, { type Request, type Response } from "express";
 import cors from "cors";
+import { errorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
 
@@ -12,5 +13,7 @@ app.get("/health", (req: Request, res: Response) => {
     server: "Online",
   });
 });
+
+app.use(errorHandler);
 
 export default app;
