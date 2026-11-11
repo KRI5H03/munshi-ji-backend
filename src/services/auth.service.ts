@@ -1,10 +1,14 @@
 import { db } from "../db/connection.js";
 import { users, businesses, userBusinesses } from "../db/schema/index.js";
-import { hashPassword } from "../utils/password.js";
+import { hashPassword, verifyPassword } from "../utils/password.js";
 import { signToken } from "../utils/jwt.js";
 import { isValidStateCode } from "../config/states.js";
-import type { RegisterInput } from "../validators/auth.validator.js";
+import type {
+  LoginInput,
+  RegisterInput,
+} from "../validators/auth.validator.js";
 import { AppError } from "../utils/AppError.js";
+import { eq, and, isNull } from "drizzle-orm";
 
 export async function register(
   input: RegisterInput,
@@ -71,4 +75,69 @@ export async function register(
   const token = signToken(userId);
 
   return { userId, businessId, token };
+}
+
+export async function login(input: LoginInput): Promise<{
+  token: string;
+  userId: string;
+  businesses: {
+    id: string;
+    name: string;
+    role: "owner" | "staff";
+    isDefault: boolean;
+  }[];
+}> {
+  // ── 1. Lowercase ────────────────────────────────────
+  const email = input.email.toLowerCase();
+
+  // ── 2. Find the user (not deleted) ──────────────────
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.email, email), isNull(users.deletedAt)))
+    .limit(1);
+
+  // ── 3. Guard — user found ───────────────────────────
+  if (!user) {
+    throw new AppError(
+      401,
+      "INVALID_CREDENTIALS",
+      "Email or password is wrong.",
+    );
+  }
+
+  // ── 4. Guard — password matches ─────────────────────
+  const ok = await verifyPassword(input.password, user.passwordHash);
+  if (!ok) {
+    throw new AppError(
+      401,
+      "INVALID_CREDENTIALS",
+      "Email or password is wrong.",
+    );
+  }
+
+  // ── 5. Record the login ─────────────────────────────
+  await db
+    .update(users)
+    .set({ lastLoginAt: new Date() })
+    .where(eq(users.id, user.id));
+
+  // ── 6. Load his firms (join) ────────────────────────
+  const firms = await db
+    .select({
+      id: businesses.id,
+      name: businesses.name,
+      role: userBusinesses.role,
+      isDefault: userBusinesses.isDefault,
+    })
+    .from(userBusinesses)
+    .innerJoin(businesses, eq(userBusinesses.businessId, businesses.id))
+    .where(eq(userBusinesses.userId, user.id));
+
+  // ── 7. Token + return ───────────────────────────────
+  return {
+    token: signToken(user.id),
+    userId: user.id,
+    businesses: firms,
+  };
 }
