@@ -17,6 +17,15 @@ app.get("/health", (req: Request, res: Response) => {
 
 app.use("/api", routes);
 
+app.use((req, res) => {
+  res.status(404).json({
+    error: {
+      code: "NOT_FOUND",
+      message: `No route for ${req.method} ${req.path}`,
+    },
+  });
+});
+
 app.use(errorHandler);
 
 export default app;
