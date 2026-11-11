@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const GSTIN_PATTERN = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+export const GSTIN_PATTERN = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 
 export const registerSchema = z.object({
   name: z.string().trim().min(1).max(100),
