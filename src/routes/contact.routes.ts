@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { createContactController } from "../controllers/contact.controller.js";
+import {
+  createContactsController,
+  listContactsController,
+} from "../controllers/contact.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 import { requireTenant } from "../middleware/tenant.middleware.js";
 import { validateBody } from "../middleware/validate.middleware.js";
@@ -11,6 +14,7 @@ router.post(
   requireAuth,
   requireTenant,
   validateBody(createContactSchema),
-  createContactController,
+  createContactsController,
 );
+router.get("/", requireAuth, requireTenant, listContactsController);
 export default router;
