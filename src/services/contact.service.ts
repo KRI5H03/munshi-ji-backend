@@ -4,6 +4,7 @@ import { db } from "../db/connection.js";
 import { contacts } from "../db/schema/index.js";
 import { AppError } from "../utils/AppError.js";
 import type { CreateContactInput } from "../validators/contact.validator.js";
+import { UUID_PATTERN } from "../utils/jwt.js";
 
 export async function createContact(
   businessId: string,
@@ -79,4 +80,31 @@ export async function listContacts(
     .limit(50);
 
   return rows;
+}
+
+export async function getContact(
+  businessId: string,
+  contactId: string,
+): Promise<typeof contacts.$inferSelect> {
+  if (!UUID_PATTERN.test(contactId)) {
+    throw new AppError(400, "INVALID_ID", "Invalid contact id.");
+  }
+
+  const [row] = await db
+    .select()
+    .from(contacts)
+    .where(
+      and(
+        eq(contacts.id, contactId),
+        eq(contacts.businessId, businessId),
+        isNull(contacts.deletedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!row) {
+    throw new AppError(404, "CONTACT_NOT_FOUND", "Contact not found.");
+  }
+
+  return row;
 }
