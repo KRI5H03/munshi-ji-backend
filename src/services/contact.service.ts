@@ -1,3 +1,4 @@
+import { and, eq, ilike, isNull, or, asc } from "drizzle-orm";
 import { isValidStateCode } from "../config/states.js";
 import { db } from "../db/connection.js";
 import { contacts } from "../db/schema/index.js";
@@ -44,4 +45,38 @@ export async function createContact(
     .returning();
   if (!row) throw new Error("createContact: insert returned no row.");
   return row;
+}
+
+export async function listContacts(
+  businessId: string,
+  search?: string,
+): Promise<(typeof contacts.$inferSelect)[]> {
+  // Step 1: clean the search
+  const term = search?.trim() || undefined;
+
+  // Step 2: guard
+  if (!(!term || term.length <= 100)) {
+    throw new AppError(400, "SEARCH_TOO_LONG", "Search is too long.");
+  }
+
+  // Step 3 + 4: query
+  const rows = await db
+    .select()
+    .from(contacts)
+    .where(
+      and(
+        eq(contacts.businessId, businessId),
+        isNull(contacts.deletedAt),
+        term
+          ? or(
+              ilike(contacts.name, `%${term}%`),
+              ilike(contacts.city, `%${term}%`),
+            )
+          : undefined,
+      ),
+    )
+    .orderBy(asc(contacts.name))
+    .limit(50);
+
+  return rows;
 }
