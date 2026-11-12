@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   createContactsController,
+  getContactController,
   listContactsController,
 } from "../controllers/contact.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
@@ -17,4 +18,5 @@ router.post(
   createContactsController,
 );
 router.get("/", requireAuth, requireTenant, listContactsController);
+router.get("/:id", requireAuth, requireTenant, getContactController);
 export default router;
