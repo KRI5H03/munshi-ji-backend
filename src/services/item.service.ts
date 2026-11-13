@@ -115,3 +115,14 @@ export async function updateItem(
   }
   return row;
 }
+
+export async function deleteItem(
+  businessId: string,
+  itemId: string,
+): Promise<void> {
+  await getItem(businessId, itemId);
+  await db
+    .update(items)
+    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(items.id, itemId), eq(items.businessId, businessId)));
+}
