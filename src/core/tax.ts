@@ -15,7 +15,7 @@ export type TaxSummaryRow = {
   igst: number;
 };
 
-const HSN_PATTERN = /^\d{4,8}$/;
+export const HSN_PATTERN = /^\d{4,8}$/;
 
 export function computeTaxSummary(
   lines: TaxLine[],
