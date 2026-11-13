@@ -3,6 +3,7 @@ import { db } from "../db/connection.js";
 import { items, stockMovements } from "../db/schema/index.js";
 import { AppError } from "../utils/AppError.js";
 import type { CreateItemInput } from "../validators/item.validator.js";
+import { UUID_PATTERN } from "../utils/jwt.js";
 
 export async function createItem(
   businessId: string,
@@ -63,4 +64,28 @@ export async function listItems(
     .orderBy(asc(items.description))
     .limit(50);
   return rows;
+}
+
+export async function getItem(
+  businessId: string,
+  itemId: string,
+): Promise<typeof items.$inferSelect> {
+  if (!UUID_PATTERN.test(itemId)) {
+    throw new AppError(400, "INVALID_ID", "Invalid item id.");
+  }
+  const [row] = await db
+    .select()
+    .from(items)
+    .where(
+      and(
+        eq(items.id, itemId),
+        eq(items.businessId, businessId),
+        isNull(items.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!row) {
+    throw new AppError(404, "ITEM_NOT_FOUND", "Item not found.");
+  }
+  return row;
 }
