@@ -3,7 +3,10 @@ import { isValidStateCode } from "../config/states.js";
 import { db } from "../db/connection.js";
 import { contacts } from "../db/schema/index.js";
 import { AppError } from "../utils/AppError.js";
-import type { CreateContactInput } from "../validators/contact.validator.js";
+import type {
+  CreateContactInput,
+  UpdateContactInput,
+} from "../validators/contact.validator.js";
 import { UUID_PATTERN } from "../utils/jwt.js";
 
 export async function createContact(
@@ -106,5 +109,47 @@ export async function getContact(
     throw new AppError(404, "CONTACT_NOT_FOUND", "Contact not found.");
   }
 
+  return row;
+}
+
+export async function updateContact(
+  businessId: string,
+  contactId: string,
+  input: UpdateContactInput,
+): Promise<typeof contacts.$inferSelect> {
+  const existing = await getContact(businessId, contactId);
+  const gstin = input.gstin ?? existing.gstin;
+  const stateCode = gstin
+    ? gstin.slice(0, 2)
+    : (input.stateCode ?? existing.stateCode);
+  if (!(!gstin || !input.stateCode || input.stateCode === stateCode)) {
+    throw new AppError(
+      400,
+      "STATE_MISMATCH",
+      "State code does not match GSTIN.",
+    );
+  }
+  if (!isValidStateCode(stateCode)) {
+    throw new AppError(400, "INVALID_STATE", "Invalid state code.");
+  }
+  const [row] = await db
+    .update(contacts)
+    .set({
+      name: input.name ?? existing.name,
+      contactType: input.contactType ?? existing.contactType,
+      city: input.city ?? existing.city,
+      address: input.address ?? existing.address,
+      pan: input.pan ?? existing.pan,
+      phone: input.phone ?? existing.phone,
+      aadhaarEncrypted: input.aadhaar ?? existing.aadhaarEncrypted,
+      stateCode: stateCode,
+      gstin: gstin,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(contacts.id, contactId), eq(contacts.businessId, businessId)))
+    .returning();
+  if (!row) {
+    throw new Error("updateContact: update returned no row.");
+  }
   return row;
 }
