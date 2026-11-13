@@ -3,9 +3,10 @@ import {
   createContact,
   getContact,
   listContacts,
+  updateContact,
 } from "../services/contact.service.js";
 
-export async function createContactsController(req: Request, res: Response) {
+export async function createContactController(req: Request, res: Response) {
   if (!req.businessId)
     throw new Error("createContactController: requireTenant must run first.");
   const contact = await createContact(req.businessId, req.body);
@@ -47,5 +48,21 @@ export async function getContactController(
   }
 
   const row = await getContact(req.businessId, contactId);
+  res.status(200).json({ contact: row });
+}
+
+export async function updateContactController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (!req.businessId) {
+    throw new Error("updateContactController: requireTenant must run first.");
+  }
+  const contactId =
+    typeof req.params.id === "string" ? req.params.id : undefined;
+  if (!contactId) {
+    throw new Error("updateContactController: route needs :id.");
+  }
+  const row = await updateContact(req.businessId, contactId, req.body);
   res.status(200).json({ contact: row });
 }
