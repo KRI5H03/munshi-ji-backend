@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { createItem } from "../services/item.service.js";
+import { createItem, listItems } from "../services/item.service.js";
 
 export async function createItemController(
   req: Request,
@@ -13,4 +13,17 @@ export async function createItemController(
   }
   const item = await createItem(req.businessId, req.userId, req.body);
   res.status(201).json({ item });
+}
+
+export async function listItemsController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const search =
+    typeof req.query.search === "string" ? req.query.search : undefined;
+  if (!req.businessId) {
+    throw new Error("listItemsController: requireTenant must run first.");
+  }
+  const rows = await listItems(req.businessId, search);
+  res.status(200).json({ items: rows });
 }
