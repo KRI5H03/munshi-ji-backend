@@ -1,5 +1,10 @@
 import type { Request, Response } from "express";
-import { createItem, getItem, listItems } from "../services/item.service.js";
+import {
+  createItem,
+  getItem,
+  listItems,
+  updateItem,
+} from "../services/item.service.js";
 
 export async function createItemController(
   req: Request,
@@ -40,5 +45,20 @@ export async function getItemController(
     throw new Error("getItemController: route needs :id.");
   }
   const row = await getItem(req.businessId, itemId);
+  res.status(200).json({ item: row });
+}
+
+export async function updateItemController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (!req.businessId) {
+    throw new Error("updateItemController: requireTenant must run first.");
+  }
+  const itemId = typeof req.params.id === "string" ? req.params.id : undefined;
+  if (!itemId) {
+    throw new Error("updateItemController: route needs :id.");
+  }
+  const row = await updateItem(req.businessId, itemId, req.body);
   res.status(200).json({ item: row });
 }
