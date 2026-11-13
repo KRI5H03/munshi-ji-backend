@@ -5,6 +5,7 @@ import { validateBody } from "../middleware/validate.middleware.js";
 import { createItemSchema } from "../validators/item.validator.js";
 import {
   createItemController,
+  getItemController,
   listItemsController,
 } from "../controllers/item.controller.js";
 
@@ -18,5 +19,6 @@ router.post(
   createItemController,
 );
 router.get("/", requireAuth, requireTenant, listItemsController);
+router.get("/:id", requireAuth, requireTenant, getItemController);
 
 export default router;
