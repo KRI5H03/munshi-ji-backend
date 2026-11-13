@@ -153,3 +153,16 @@ export async function updateContact(
   }
   return row;
 }
+
+export async function deleteContact(
+  businessId: string,
+  contactId: string,
+): Promise<void> {
+  await getContact(businessId, contactId);
+  await db
+    .update(contacts)
+    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .where(
+      and(eq(contacts.id, contactId), eq(contacts.businessId, businessId)),
+    );
+}
