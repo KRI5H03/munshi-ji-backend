@@ -174,3 +174,58 @@ bcrypt + JWT, then tenant middleware.
 - Phase 1 (auth + tenancy) DONE.
 
 **Next:** contacts — validator, createContact service, POST /contacts.
+
+## Day 12 — Thu 12 Nov 2026
+
+- (Late on the 11th) validators/contact.validator.ts by AI;
+  contact.service createContact — state code taken from the GSTIN,
+  STATE_MISMATCH if both are sent and differ, INVALID_STATE guard.
+  POST /contacts wired. Duplicate GSTIN → 409 contacts_gstin_uq.
+- Fixed commit history before pushing: git reset --soft HEAD~4,
+  recommitted in 4 clean groups. Only rewrite unpushed commits.
+- listContacts — firm-scoped, skips deleted, optional search on
+  name OR city (ilike %term%), A–Z, limit 50. GET /contacts.
+- getContact — UUID guard, 404 for missing / deleted / other firm's
+  contact (never reveal that it exists). GET /contacts/:id.
+- Bugs: guard missing its !( ); ilike without % only matched exact
+  names; await missing → Promise sent as {}; req.params instead of
+  req.params.id; Express 5 types params as string | string[] — use
+  the typeof === "string" check.
+- Afternoon and evening off. Short day.
+
+**Next:** updateContact, deleteContact, then items.
+
+## Day 13 — Fri 13 Nov 2026 (best day so far: 52% → 67%)
+
+- Contacts COMPLETE: updateContact (?? keeps old values; final GSTIN
+  decides the state; STATE_MISMATCH guard), deleteContact (soft
+  delete via deletedAt, 204 No Content). PATCH + DELETE routes.
+- Validators by AI: contactFields split so update can use .partial()
+  (Zod 4 can't .partial() a refined schema); item validator;
+  business validator; sale invoice validator.
+- Items COMPLETE: createItem writes the item + an "opening" stock
+  movement in ONE transaction (no movement when stock is 0 — DB
+  forbids qty_change 0). list (search description OR design no),
+  get, update (no stock edits — stock only moves through bills),
+  soft delete. Design no unique per firm, case-insensitive → 409.
+- Business profile COMPLETE: getBusiness, updateBusiness (GSTIN and
+  state code not editable), GET + PATCH /businesses/profile.
+  PATCH is owner-only → 403 for staff.
+- Exported HSN_PATTERN from core/tax.ts for the item validator.
+- Method that worked: one function per goal, line-by-line table,
+  curl tests, commit after every goal. 32 goals, ~25 commits.
+- Bugs: STATE_MISMATCHED vs STATE_MISMATCH; createContactsController
+  (extra s — the routes file wasn't open so VS Code showed no error);
+  200 instead of 204 twice; search: string missing its ?; stray
+  `import { input } from "zod"` from auto-import; import type used for
+  a table that's a real value; `touch File: create a new file,`
+  created 5 junk files.
+- Commit typo: "eat: add item validator" (missing f). Left it — not
+  worth rewriting history. Read the message before clicking Commit.
+- Learned: soft delete keeps history for old bills; 204 + .end() for
+  no body; PATCH vs POST vs GET; onConflictDoUpdate does insert-or-+1
+  in one statement (for the invoice counter).
+
+**Next:** Goal 35 — nextSerial in src/services/counter.service.ts
+(insert with lastSerial 1, onConflictDoUpdate +1 inside Postgres,
+inside the sale transaction). Then the bill maths in core.
