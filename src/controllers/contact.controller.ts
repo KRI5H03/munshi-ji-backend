@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import {
   createContact,
+  deleteContact,
   getContact,
   listContacts,
   updateContact,
@@ -65,4 +66,20 @@ export async function updateContactController(
   }
   const row = await updateContact(req.businessId, contactId, req.body);
   res.status(200).json({ contact: row });
+}
+
+export async function deleteContactController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (!req.businessId) {
+    throw new Error("deleteContactController: requireTenant must run first.");
+  }
+  const contactId =
+    typeof req.params.id === "string" ? req.params.id : undefined;
+  if (!contactId) {
+    throw new Error("deleteContactController: route needs :id.");
+  }
+  await deleteContact(req.businessId, contactId);
+  res.status(204).end();
 }

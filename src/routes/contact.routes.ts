@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   createContactController,
+  deleteContactController,
   getContactController,
   listContactsController,
   updateContactController,
@@ -30,4 +31,5 @@ router.patch(
   validateBody(updateContactSchema),
   updateContactController,
 );
+router.delete("/:id", requireAuth, requireTenant, deleteContactController);
 export default router;
