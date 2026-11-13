@@ -2,7 +2,10 @@ import { and, eq, ilike, isNull, or, asc } from "drizzle-orm";
 import { db } from "../db/connection.js";
 import { items, stockMovements } from "../db/schema/index.js";
 import { AppError } from "../utils/AppError.js";
-import type { CreateItemInput } from "../validators/item.validator.js";
+import type {
+  CreateItemInput,
+  UpdateItemInput,
+} from "../validators/item.validator.js";
 import { UUID_PATTERN } from "../utils/jwt.js";
 
 export async function createItem(
@@ -86,6 +89,29 @@ export async function getItem(
     .limit(1);
   if (!row) {
     throw new AppError(404, "ITEM_NOT_FOUND", "Item not found.");
+  }
+  return row;
+}
+
+export async function updateItem(
+  businessId: string,
+  itemId: string,
+  input: UpdateItemInput,
+): Promise<typeof items.$inferSelect> {
+  const existing = await getItem(businessId, itemId);
+  const [row] = await db
+    .update(items)
+    .set({
+      description: input.description ?? existing.description,
+      hsnCode: input.hsnCode ?? existing.hsnCode,
+      designNo: input.designNo ?? existing.designNo,
+      unit: input.unit ?? existing.unit,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(items.id, itemId), eq(items.businessId, businessId)))
+    .returning();
+  if (!row) {
+    throw new Error("updateItem: update returned no row.");
   }
   return row;
 }
