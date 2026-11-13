@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import {
   createItem,
+  deleteItem,
   getItem,
   listItems,
   updateItem,
@@ -61,4 +62,19 @@ export async function updateItemController(
   }
   const row = await updateItem(req.businessId, itemId, req.body);
   res.status(200).json({ item: row });
+}
+
+export async function deleteItemController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (!req.businessId) {
+    throw new Error("deleteItemController: requireTenant must run first.");
+  }
+  const itemId = typeof req.params.id === "string" ? req.params.id : undefined;
+  if (!itemId) {
+    throw new Error("deleteItemController: route needs :id.");
+  }
+  await deleteItem(req.businessId, itemId);
+  res.status(204).end();
 }

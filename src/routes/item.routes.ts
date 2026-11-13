@@ -8,6 +8,7 @@ import {
 } from "../validators/item.validator.js";
 import {
   createItemController,
+  deleteItemController,
   getItemController,
   listItemsController,
   updateItemController,
@@ -31,5 +32,6 @@ router.patch(
   validateBody(updateItemSchema),
   updateItemController,
 );
+router.delete("/:id", requireAuth, requireTenant, deleteItemController);
 
 export default router;
