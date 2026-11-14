@@ -1,3 +1,10 @@
+import {
+  applyStackedDiscounts,
+  apportionDiscount,
+  type DiscountStep,
+} from "./discount.js";
+import { getGstRateBp } from "./gst.js";
+
 export type BillLineInput = { qty: number; rate: number };
 
 export type BillLine = {
@@ -7,6 +14,13 @@ export type BillLine = {
   discountAlloc: number;
   taxable: number;
   gstRateBp: number;
+};
+
+export type BuiltLines = {
+  lines: BillLine[];
+  grossTotal: number;
+  discountSteps: DiscountStep[];
+  discountTotal: number;
 };
 
 export function lineGrosses(inputs: BillLineInput[]): {
@@ -45,4 +59,41 @@ export function perPieceCeil(taxable: number, qty: number): number {
   const rem = taxable % qty;
   const whole = (taxable - rem) / qty;
   return rem > 0 ? whole + 1 : whole;
+}
+
+export function buildLines(
+  inputs: BillLineInput[],
+  percentMillis: number[],
+  date: string,
+): BuiltLines {
+  const { grosses, grossTotal } = lineGrosses(inputs);
+  const stacked = applyStackedDiscounts(grossTotal, percentMillis);
+  const allocs =
+    stacked.discountTotal === 0
+      ? grosses.map(() => 0)
+      : apportionDiscount(grosses, stacked.discountTotal);
+  const lines: BillLine[] = [];
+  for (const [i, input] of inputs.entries()) {
+    const gross = grosses[i];
+    const discountAlloc = allocs[i];
+    if (gross === undefined || discountAlloc === undefined) {
+      throw new Error(`buildLines: missing value at line ${i}.`);
+    }
+    const taxable = gross - discountAlloc;
+    const gstRateBp = getGstRateBp(perPieceCeil(taxable, input.qty), date);
+    lines.push({
+      qty: input.qty,
+      rate: input.rate,
+      gross,
+      discountAlloc,
+      taxable,
+      gstRateBp,
+    });
+  }
+  return {
+    lines,
+    grossTotal,
+    discountSteps: stacked.steps,
+    discountTotal: stacked.discountTotal,
+  };
 }
