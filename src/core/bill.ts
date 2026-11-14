@@ -1,3 +1,36 @@
+export type BillLineInput = { qty: number; rate: number };
+
+export type BillLine = {
+  qty: number;
+  rate: number;
+  gross: number;
+  discountAlloc: number;
+  taxable: number;
+  gstRateBp: number;
+};
+
+export function lineGrosses(inputs: BillLineInput[]): {
+  grosses: number[];
+  grossTotal: number;
+} {
+  if (!(inputs.length > 0)) {
+    throw new Error("lineGrosses: no lines given.");
+  }
+  const grosses: number[] = [];
+  let grossTotal = 0;
+  for (const line of inputs) {
+    const gross = line.qty * line.rate;
+    if (!(Number.isSafeInteger(gross) && gross >= 0)) {
+      throw new Error(
+        `lineGrosses: invalid gross ${gross} for qty ${line.qty} x rate ${line.rate}.`,
+      );
+    }
+    grosses.push(gross);
+    grossTotal += gross;
+  }
+  return { grosses, grossTotal };
+}
+
 export function perPieceCeil(taxable: number, qty: number): number {
   if (!(Number.isSafeInteger(taxable) && taxable >= 0)) {
     throw new Error(
