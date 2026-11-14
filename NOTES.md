@@ -229,3 +229,26 @@ bcrypt + JWT, then tenant middleware.
 **Next:** Goal 35 — nextSerial in src/services/counter.service.ts
 (insert with lastSerial 1, onConflictDoUpdate +1 inside Postgres,
 inside the sale transaction). Then the bill maths in core.
+
+## Day 14 — Sat 14 Nov 2026 (67% → 76%)
+
+- counter.service: nextSerial — insert with lastSerial 1,
+  onConflictDoUpdate +1 inside Postgres. Row stays locked until the
+  transaction ends → no duplicate or skipped bill numbers.
+- core/bill.ts — the bill maths engine: perPieceCeil (round UP, decides
+  5% vs 18%), lineGrosses, buildLines (stacked discount → apportion →
+  taxable → GST rate per line), computeTotals (tax summary → totals →
+  round to rupee). 15 tests by AI, 124 passing.
+- sale.service helpers: loadItemsForSale (SELECT … FOR UPDATE locks
+  items), checkStock (sums qty per item across lines), loadParties
+  (firm + billed-to must be customer/both + optional ship-to),
+  buildInvoiceValues (snapshot of customer + totals),
+  insertLinesAndSummary, moveStockForSale (movement −qty + stock − qty).
+- Learned transactions: tx is a pencil draft — finish = saved, any
+  throw = everything erased. Inside it always use tx, never db.
+- Bugs: `get(x) ?? 0 + qty` — + runs before ??, so repeats never added
+  (needs brackets); itemsId vs itemId; shippedTo typed undefined vs null.
+  One wrong expected value in an AI-written test — the code was right.
+
+**Next:** Goal 47 writeLedgerAndAudit, then createSale (connect every
+helper in one transaction), controller, route, first real bill → 80%.
