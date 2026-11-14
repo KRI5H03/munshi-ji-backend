@@ -1,5 +1,12 @@
 import { eq, inArray, isNull, and } from "drizzle-orm";
-import { businesses, contacts, invoices, items } from "../db/schema/index.js";
+import {
+  businesses,
+  contacts,
+  invoiceLines,
+  invoices,
+  invoiceTaxSummary,
+  items,
+} from "../db/schema/index.js";
 import type { Tx } from "./counter.service.js";
 import { AppError } from "../utils/AppError.js";
 import { getBusiness } from "./business.service.js";
@@ -7,6 +14,7 @@ import { getContact } from "./contact.service.js";
 import type { CreateSaleInput } from "../validators/invoice.validator.js";
 import type { BillTotals, BuiltLines } from "../core/bill.js";
 import { formatInvoiceNo } from "../core/invoiceNumber.js";
+import type { TaxSummaryRow } from "../core/tax.js";
 
 type ItemRow = typeof items.$inferSelect;
 type ContactRow = typeof contacts.$inferSelect;
@@ -144,4 +152,42 @@ export function buildInvoiceValues(a: InvoiceArgs): InvoiceInsert {
     grandTotal: a.totals.grandTotal,
     createdBy: a.userId,
   };
+}
+
+export async function insertLinesAndSummary(
+  tx: Tx,
+  businessId: string,
+  invoiceId: string,
+  inputs: { itemId: string }[],
+  built: BuiltLines,
+  itemMap: Map<string, ItemRow>,
+  taxSummary: TaxSummaryRow[],
+): Promise<void> {
+  const lineRows: (typeof invoiceLines.$inferInsert)[] = [];
+  for (const [i, line] of built.lines.entries()) {
+    const itemId = inputs[i]?.itemId;
+    const item = itemId ? itemMap.get(itemId) : undefined;
+    if (!item)
+      throw new Error(`insertLinesAndSummary: item missing at line ${i}.`);
+    lineRows.push({
+      businessId,
+      invoiceId,
+      lineNo: i + 1,
+      itemId: item.id,
+      description: item.description,
+      hsnCode: item.hsnCode,
+      designNo: item.designNo,
+      unit: item.unit,
+      qty: line.qty,
+      rate: line.rate,
+      gross: line.gross,
+      discountAlloc: line.discountAlloc,
+      taxable: line.taxable,
+      gstRateBp: line.gstRateBp,
+    });
+  }
+  await tx.insert(invoiceLines).values(lineRows);
+  await tx
+    .insert(invoiceTaxSummary)
+    .values(taxSummary.map((r) => ({ businessId, invoiceId, ...r })));
 }
