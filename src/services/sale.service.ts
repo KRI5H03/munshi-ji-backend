@@ -1,4 +1,4 @@
-import { eq, inArray, isNull, and } from "drizzle-orm";
+import { eq, inArray, isNull, and, sql } from "drizzle-orm";
 import {
   businesses,
   contacts,
@@ -6,6 +6,7 @@ import {
   invoices,
   invoiceTaxSummary,
   items,
+  stockMovements,
 } from "../db/schema/index.js";
 import type { Tx } from "./counter.service.js";
 import { AppError } from "../utils/AppError.js";
@@ -190,4 +191,30 @@ export async function insertLinesAndSummary(
   await tx
     .insert(invoiceTaxSummary)
     .values(taxSummary.map((r) => ({ businessId, invoiceId, ...r })));
+}
+
+export async function moveStockForSale(
+  tx: Tx,
+  businessId: string,
+  invoiceId: string,
+  userId: string,
+  inputs: { itemId: string; qty: number }[],
+): Promise<void> {
+  for (const line of inputs) {
+    await tx.insert(stockMovements).values({
+      businessId,
+      itemId: line.itemId,
+      invoiceId,
+      qtyChange: -line.qty,
+      reason: "sale",
+      createdBy: userId,
+    });
+    await tx
+      .update(items)
+      .set({
+        stockQty: sql`${items.stockQty} - ${line.qty}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(items.id, line.itemId));
+  }
 }
