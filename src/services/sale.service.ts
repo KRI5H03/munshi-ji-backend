@@ -1,9 +1,13 @@
 import { eq, inArray, isNull, and } from "drizzle-orm";
-import { items } from "../db/schema/index.js";
+import { businesses, contacts, items } from "../db/schema/index.js";
 import type { Tx } from "./counter.service.js";
 import { AppError } from "../utils/AppError.js";
+import { getBusiness } from "./business.service.js";
+import { getContact } from "./contact.service.js";
 
 type ItemRow = typeof items.$inferSelect;
+type ContactRow = typeof contacts.$inferSelect;
+type BusinessRow = typeof businesses.$inferSelect;
 
 export async function loadItemsForSale(
   tx: Tx,
@@ -57,4 +61,30 @@ export function checkStock(
       );
     }
   }
+}
+
+export async function loadParties(
+  businessId: string,
+  billedToId: string,
+  shippedToId: string | undefined,
+): Promise<{
+  business: BusinessRow;
+  billedTo: ContactRow;
+  shippedTo: ContactRow | null;
+}> {
+  const business = await getBusiness(businessId);
+  const billedTo = await getContact(businessId, billedToId);
+  if (
+    !(billedTo.contactType === "customer" || billedTo.contactType === "both")
+  ) {
+    throw new AppError(
+      400,
+      "NOT_A_CUSTOMER",
+      `${billedTo.name} is a supplier, not a customer.`,
+    );
+  }
+  const shippedTo = shippedToId
+    ? await getContact(businessId, shippedToId)
+    : null;
+  return { business, billedTo, shippedTo };
 }
