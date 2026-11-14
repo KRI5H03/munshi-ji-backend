@@ -4,6 +4,8 @@ import {
   type DiscountStep,
 } from "./discount.js";
 import { getGstRateBp } from "./gst.js";
+import { roundToRupee } from "./money.js";
+import { computeTaxSummary, type TaxLine, type TaxSummaryRow } from "./tax.js";
 
 export type BillLineInput = { qty: number; rate: number };
 
@@ -21,6 +23,16 @@ export type BuiltLines = {
   grossTotal: number;
   discountSteps: DiscountStep[];
   discountTotal: number;
+};
+
+export type BillTotals = {
+  taxSummary: TaxSummaryRow[];
+  taxable: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  roundOff: number;
+  grandTotal: number;
 };
 
 export function lineGrosses(inputs: BillLineInput[]): {
@@ -96,4 +108,23 @@ export function buildLines(
     discountSteps: stacked.steps,
     discountTotal: stacked.discountTotal,
   };
+}
+
+export function computeTotals(
+  taxLines: TaxLine[],
+  interState: boolean,
+): BillTotals {
+  const taxSummary = computeTaxSummary(taxLines, interState);
+  let taxable = 0,
+    cgst = 0,
+    sgst = 0,
+    igst = 0;
+  for (const row of taxSummary) {
+    taxable += row.taxable;
+    cgst += row.cgst;
+    sgst += row.sgst;
+    igst += row.igst;
+  }
+  const { total, roundOff } = roundToRupee(taxable + cgst + igst + sgst);
+  return { taxSummary, taxable, cgst, sgst, igst, roundOff, grandTotal: total };
 }
