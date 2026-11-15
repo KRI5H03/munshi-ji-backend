@@ -1,11 +1,13 @@
 import { eq, inArray, isNull, and, sql } from "drizzle-orm";
 import {
+  auditLogs,
   businesses,
   contacts,
   invoiceLines,
   invoices,
   invoiceTaxSummary,
   items,
+  ledgerEntries,
   stockMovements,
 } from "../db/schema/index.js";
 import type { Tx } from "./counter.service.js";
@@ -31,6 +33,15 @@ type InvoiceArgs = {
   shippedTo: ContactRow | null;
   built: BuiltLines;
   totals: BillTotals;
+};
+type LedgerArgs = {
+  businessId: string;
+  userId: string;
+  invoiceId: string;
+  invoiceNo: string;
+  contactId: string;
+  date: string;
+  grandTotal: number;
 };
 
 export async function loadItemsForSale(
@@ -217,4 +228,31 @@ export async function moveStockForSale(
       })
       .where(eq(items.id, line.itemId));
   }
+}
+
+export async function writeLedgerAndAudit(
+  tx: Tx,
+  a: LedgerArgs,
+): Promise<void> {
+  if (a.grandTotal > 0) {
+    await tx.insert(ledgerEntries).values({
+      businessId: a.businessId,
+      contactId: a.contactId,
+      entryType: "sale",
+      invoiceId: a.invoiceId,
+      date: a.date,
+      debit: a.grandTotal,
+      credit: 0,
+      narration: `Sale bill ${a.invoiceNo}`,
+      createdBy: a.userId,
+    });
+  }
+  await tx.insert(auditLogs).values({
+    businessId: a.businessId,
+    userId: a.userId,
+    tableName: "invoices",
+    recordId: a.invoiceId,
+    action: "create",
+    newData: { invoiceNo: a.invoiceNo, grandTotal: a.grandTotal },
+  });
 }
