@@ -1,4 +1,14 @@
-import { eq, inArray, isNull, and, sql, asc } from "drizzle-orm";
+import {
+  eq,
+  inArray,
+  isNull,
+  and,
+  sql,
+  asc,
+  ilike,
+  or,
+  desc,
+} from "drizzle-orm";
 import {
   auditLogs,
   businesses,
@@ -389,4 +399,35 @@ export async function getSale(
     )
     .orderBy(asc(invoiceTaxSummary.hsnCode));
   return { invoice, lines, taxSummary };
+}
+
+export async function listSales(businessId: string, search?: string) {
+  const term = search?.trim() || undefined;
+  if (!(!term || term?.length <= 100)) {
+    throw new AppError(400, "SEARCH_TOO_LONG", "Search is too long.");
+  }
+  return db
+    .select({
+      id: invoices.id,
+      invoiceNo: invoices.invoiceNo,
+      date: invoices.date,
+      billedToName: invoices.billedToName,
+      grandTotal: invoices.grandTotal,
+      status: invoices.status,
+    })
+    .from(invoices)
+    .where(
+      and(
+        eq(invoices.businessId, businessId),
+        eq(invoices.docType, "sale"),
+        term
+          ? or(
+              ilike(invoices.billedToName, `%${term}%`),
+              ilike(invoices.invoiceNo, `%${term}%`),
+            )
+          : undefined,
+      ),
+    )
+    .orderBy(desc(invoices.date), desc(invoices.serial))
+    .limit(100);
 }
