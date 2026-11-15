@@ -10,14 +10,21 @@ import {
   ledgerEntries,
   stockMovements,
 } from "../db/schema/index.js";
-import type { Tx } from "./counter.service.js";
+import { nextSerial, type Tx } from "./counter.service.js";
 import { AppError } from "../utils/AppError.js";
 import { getBusiness } from "./business.service.js";
 import { getContact } from "./contact.service.js";
 import type { CreateSaleInput } from "../validators/invoice.validator.js";
-import type { BillTotals, BuiltLines } from "../core/bill.js";
+import {
+  buildLines,
+  computeTotals,
+  type BillTotals,
+  type BuiltLines,
+} from "../core/bill.js";
 import { formatInvoiceNo } from "../core/invoiceNumber.js";
 import type { TaxSummaryRow } from "../core/tax.js";
+import { getFinancialYear } from "../core/fy.js";
+import { db } from "../db/connection.js";
 
 type ItemRow = typeof items.$inferSelect;
 type ContactRow = typeof contacts.$inferSelect;
@@ -254,5 +261,83 @@ export async function writeLedgerAndAudit(
     recordId: a.invoiceId,
     action: "create",
     newData: { invoiceNo: a.invoiceNo, grandTotal: a.grandTotal },
+  });
+}
+
+export async function createSale(
+  businessId: string,
+  userId: string,
+  input: CreateSaleInput,
+): Promise<typeof invoices.$inferSelect> {
+  const { business, billedTo, shippedTo } = await loadParties(
+    businessId,
+    input.billedToContactId,
+    input.shippedToContactId,
+  );
+  const interState = billedTo.stateCode !== business.stateCode;
+  const fy = getFinancialYear(input.date);
+  const built = buildLines(input.lines, input.discounts, input.date);
+  return db.transaction(async (tx) => {
+    const itemMap = await loadItemsForSale(
+      tx,
+      businessId,
+      input.lines.map((l) => l.itemId),
+    );
+    checkStock(input.lines, itemMap);
+
+    const taxLines = built.lines.map((line, i) => {
+      const itemId = input.lines[i]?.itemId;
+      const item = itemId ? itemMap.get(itemId) : undefined;
+      if (!item) {
+        throw new Error(`createSale: item missing at line ${i}.`);
+      }
+      return {
+        hsnCode: item.hsnCode,
+        gstRateBp: line.gstRateBp,
+        taxable: line.taxable,
+      };
+    });
+
+    const totals = computeTotals(taxLines, interState);
+    const serial = await nextSerial(tx, businessId, "sale", fy);
+    const [invoice] = await tx
+      .insert(invoices)
+      .values(
+        buildInvoiceValues({
+          businessId,
+          userId,
+          input,
+          fy,
+          serial,
+          billedTo,
+          shippedTo,
+          built,
+          totals,
+        }),
+      )
+      .returning();
+    if (!invoice) {
+      throw new Error("createSale: invoice insert returned no row.");
+    }
+    await insertLinesAndSummary(
+      tx,
+      businessId,
+      invoice.id,
+      input.lines,
+      built,
+      itemMap,
+      totals.taxSummary,
+    );
+    await moveStockForSale(tx, businessId, invoice.id, userId, input.lines);
+    await writeLedgerAndAudit(tx, {
+      businessId,
+      userId,
+      invoiceId: invoice.id,
+      invoiceNo: invoice.invoiceNo ?? "",
+      contactId: billedTo.id,
+      date: input.date,
+      grandTotal: totals.grandTotal,
+    });
+    return invoice;
   });
 }
