@@ -1,4 +1,4 @@
-import { eq, inArray, isNull, and, sql } from "drizzle-orm";
+import { eq, inArray, isNull, and, sql, asc } from "drizzle-orm";
 import {
   auditLogs,
   businesses,
@@ -25,6 +25,7 @@ import { formatInvoiceNo } from "../core/invoiceNumber.js";
 import type { TaxSummaryRow } from "../core/tax.js";
 import { getFinancialYear } from "../core/fy.js";
 import { db } from "../db/connection.js";
+import { UUID_PATTERN } from "../utils/jwt.js";
 
 type ItemRow = typeof items.$inferSelect;
 type ContactRow = typeof contacts.$inferSelect;
@@ -340,4 +341,52 @@ export async function createSale(
     });
     return invoice;
   });
+}
+
+export async function getSale(
+  businessId: string,
+  invoiceId: string,
+): Promise<{
+  invoice: typeof invoices.$inferSelect;
+  lines: (typeof invoiceLines.$inferSelect)[];
+  taxSummary: (typeof invoiceTaxSummary.$inferSelect)[];
+}> {
+  if (!UUID_PATTERN.test(invoiceId)) {
+    throw new AppError(400, "INVALID_ID", "Invalid invoice id.");
+  }
+  const [invoice] = await db
+    .select()
+    .from(invoices)
+    .where(
+      and(
+        eq(invoices.id, invoiceId),
+        eq(invoices.businessId, businessId),
+        eq(invoices.docType, "sale"),
+      ),
+    )
+    .limit(1);
+  if (!invoice) {
+    throw new AppError(404, "INVOICE_NOT_FOUND", "Invoice not found.");
+  }
+  const lines = await db
+    .select()
+    .from(invoiceLines)
+    .where(
+      and(
+        eq(invoiceLines.invoiceId, invoiceId),
+        eq(invoiceLines.businessId, businessId),
+      ),
+    )
+    .orderBy(asc(invoiceLines.lineNo));
+  const taxSummary = await db
+    .select()
+    .from(invoiceTaxSummary)
+    .where(
+      and(
+        eq(invoiceTaxSummary.invoiceId, invoiceId),
+        eq(invoiceTaxSummary.businessId, businessId),
+      ),
+    )
+    .orderBy(asc(invoiceTaxSummary.hsnCode));
+  return { invoice, lines, taxSummary };
 }
