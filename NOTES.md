@@ -252,3 +252,29 @@ inside the sale transaction). Then the bill maths in core.
 
 **Next:** Goal 47 writeLedgerAndAudit, then createSale (connect every
 helper in one transaction), controller, route, first real bill → 80%.
+
+## Day 15 — Sun 15 Nov 2026 (ran to 1am · 76% → 84%)
+
+- sale.service: writeLedgerAndAudit — ledger debit = grand total
+  (skipped for a ₹0 bill, DB needs debit > 0) + audit row "create".
+- createSale — connects every helper. Reads + maths BEFORE the
+  transaction (loadParties, interState, getFinancialYear, buildLines);
+  inside it: lock items → checkStock → HSN from items → computeTotals →
+  nextSerial → insert invoice → lines + tax summary → stock → ledger +
+  audit. Short transaction = items locked for the least time.
+- POST /sales. FIRST REAL BILL: 1/2026-27, 10 × ₹850 less 10% →
+  taxable 7,650, CGST = SGST 191.25, round off +0.50, total ₹8,033.00 —
+  matched the hand calculation to the paisa. Stock 50 → 40.
+- Proved the transaction: a bill over stock failed with "Only 40 left
+  of BC-101." and the next bill got 2/2026-27, not 3 — the failed
+  bill wasted no number.
+- getSale (invoice + lines in order + HSN table) → GET /sales/:id.
+  listSales (6 columns only, newest first, search customer OR bill no)
+  → GET /sales.
+- Bugs: hsncode vs hsnCode (left side of the object); item id fetched
+  but the item itself never looked up; search guard `<= 0` instead of
+  `<= 100` (every search would have failed).
+- My part of the backend for the hand-off is DONE.
+
+**Next:** PDF (3 copies) + frontend + deploy on the 16th;
+real bill vs Busy check on the 17th, then hand-off.
