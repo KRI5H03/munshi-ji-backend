@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { createSale, getSale } from "../services/sale.service.js";
+import { createSale, getSale, listSales } from "../services/sale.service.js";
 
 export async function createSaleController(
   req: Request,
@@ -26,4 +26,16 @@ export async function getSaleController(
   if (!invoiceId) throw new Error("getSaleController: route needs :id.");
   const sale = await getSale(req.businessId, invoiceId);
   res.status(200).json(sale);
+}
+
+export async function listSalesController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const search =
+    typeof req.query.search === "string" ? req.query.search : undefined;
+  if (!req.businessId)
+    throw new Error("listSalesController: requireTenant must run first.");
+  const rows = await listSales(req.businessId, search);
+  res.status(200).json({ sales: rows });
 }

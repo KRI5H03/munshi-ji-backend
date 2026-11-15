@@ -6,6 +6,7 @@ import { createSaleSchema } from "../validators/invoice.validator.js";
 import {
   createSaleController,
   getSaleController,
+  listSalesController,
 } from "../controllers/sale.controller.js";
 
 const router = Router();
@@ -17,6 +18,7 @@ router.post(
   validateBody(createSaleSchema),
   createSaleController,
 );
+router.get("/", requireAuth, requireTenant, listSalesController);
 router.get("/:id", requireAuth, requireTenant, getSaleController);
 
 export default router;
