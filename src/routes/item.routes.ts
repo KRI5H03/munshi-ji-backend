@@ -3,10 +3,12 @@ import { requireAuth } from "../middleware/auth.middleware.js";
 import { requireTenant } from "../middleware/tenant.middleware.js";
 import { validateBody } from "../middleware/validate.middleware.js";
 import {
+  adjustStockSchema,
   createItemSchema,
   updateItemSchema,
 } from "../validators/item.validator.js";
 import {
+  adjustStockController,
   createItemController,
   deleteItemController,
   getItemController,
@@ -31,6 +33,13 @@ router.patch(
   requireTenant,
   validateBody(updateItemSchema),
   updateItemController,
+);
+router.post(
+  "/:id/adjust",
+  requireAuth,
+  requireTenant,
+  validateBody(adjustStockSchema),
+  adjustStockController,
 );
 router.delete("/:id", requireAuth, requireTenant, deleteItemController);
 

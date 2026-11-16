@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import {
+  adjustStock,
   createItem,
   deleteItem,
   getItem,
@@ -77,4 +78,22 @@ export async function deleteItemController(
   }
   await deleteItem(req.businessId, itemId);
   res.status(204).end();
+}
+
+export async function adjustStockController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (!req.businessId) {
+    throw new Error("adjustStockController: requireTenant must run first.");
+  }
+  if (!req.userId) {
+    throw new Error("adjustStockController: requireAuth must run first.");
+  }
+  const itemId = typeof req.params.id === "string" ? req.params.id : undefined;
+  if (!itemId) {
+    throw new Error("adjustStockController: route needs :id.");
+  }
+  const row = await adjustStock(req.businessId, req.userId, itemId, req.body);
+  res.status(200).json({ item: row });
 }
