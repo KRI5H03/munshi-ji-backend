@@ -1,8 +1,12 @@
 import { db } from "../db/connection.js";
 import { eq } from "drizzle-orm";
-import { businesses } from "../db/schema/index.js";
+import { businesses, userBusinesses } from "../db/schema/index.js";
+import { isValidStateCode } from "../config/states.js";
 import { AppError } from "../utils/AppError.js";
-import type { UpdateBusinessInput } from "../validators/business.validator.js";
+import type {
+  CreateBusinessInput,
+  UpdateBusinessInput,
+} from "../validators/business.validator.js";
 
 export async function getBusiness(
   businessId: string,
@@ -46,4 +50,39 @@ export async function updateBusiness(
     throw new Error("updateBusiness: update returned no row.");
   }
   return row;
+}
+
+export async function createBusiness(
+  userId: string,
+  input: CreateBusinessInput,
+): Promise<typeof businesses.$inferSelect> {
+  const stateCode = input.gstin.slice(0, 2);
+  if (!isValidStateCode(stateCode)) {
+    throw new AppError(
+      400,
+      "INVALID_GSTIN",
+      "GSTIN has an invalid state code.",
+    );
+  }
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(businesses)
+      .values({
+        name: input.name,
+        gstin: input.gstin,
+        stateCode,
+        address: input.address,
+      })
+      .returning();
+    if (!row) {
+      throw new Error("createBusiness: insert returned no row.");
+    }
+    await tx.insert(userBusinesses).values({
+      userId,
+      businessId: row.id,
+      role: "owner",
+      isDefault: false,
+    });
+    return row;
+  });
 }
