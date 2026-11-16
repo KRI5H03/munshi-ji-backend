@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { GSTIN_PATTERN } from "./auth.validator.js";
 
 export const updateBusinessSchema = z
   .object({
@@ -29,3 +30,11 @@ export const updateBusinessSchema = z
   .refine((d) => Object.keys(d).length > 0, { message: "Nothing to update." });
 
 export type UpdateBusinessInput = z.infer<typeof updateBusinessSchema>;
+
+export const createBusinessSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  gstin: z.string().trim().toUpperCase().regex(GSTIN_PATTERN, "Invalid GSTIN"),
+  address: z.string().trim().min(1).max(500),
+});
+
+export type CreateBusinessInput = z.infer<typeof createBusinessSchema>;

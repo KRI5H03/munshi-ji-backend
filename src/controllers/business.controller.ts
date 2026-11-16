@@ -1,5 +1,9 @@
 import type { Request, Response } from "express";
-import { getBusiness, updateBusiness } from "../services/business.service.js";
+import {
+  createBusiness,
+  getBusiness,
+  updateBusiness,
+} from "../services/business.service.js";
 import { AppError } from "../utils/AppError.js";
 
 export function currentBusinessController(req: Request, res: Response) {
@@ -33,4 +37,15 @@ export async function updateBusinessController(
   }
   const row = await updateBusiness(req.businessId, req.body);
   res.status(200).json({ business: row });
+}
+
+export async function createBusinessController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (!req.userId) {
+    throw new Error("createBusinessController: requireAuth must run first.");
+  }
+  const row = await createBusiness(req.userId, req.body);
+  res.status(201).json({ business: row });
 }

@@ -86,7 +86,9 @@ Example `VALIDATION_FAILED`:
 
 ## 3. Auth
 
-### `POST /api/auth/register` — public
+### `POST /api/auth/register` — public (only when `ALLOW_REGISTER=true`)
+Otherwise → `403 REGISTER_DISABLED` "Sign-up is closed." Production keeps it off.
+
 Creates a user, their first firm, and makes them its owner.
 
 | Field | Type | Rule |
@@ -131,6 +133,22 @@ unknown email and wrong password, on purpose).
 ---
 
 ## 4. Firm (business)
+
+### `POST /api/businesses` — Auth (no `X-Business-Id` needed)
+Adds another firm for the logged-in user, who becomes its owner. Not the
+default firm. After this, call login again (or reload firms) so the firm
+picker shows it.
+
+| Field | Type | Rule |
+|---|---|---|
+| `name` | string | 1–200 chars |
+| `gstin` | string | valid GSTIN; state code comes from its first 2 digits; cannot be changed later |
+| `address` | string | 1–500 chars |
+
+→ `201 { "business": Business }`
+
+Errors: `400 VALIDATION_FAILED`, `400 INVALID_GSTIN`, `401 UNAUTHENTICATED`,
+`409 ALREADY_EXISTS` (GSTIN already used).
 
 ### `GET /api/businesses/current` — Firm
 → `200 { "businessId": "uuid", "role": "owner" | "staff" }`
