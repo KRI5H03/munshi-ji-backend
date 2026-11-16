@@ -5,7 +5,12 @@ import routes from "./routes/index.js";
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
+    allowedHeaders: ["Content-Type", "Authorization", "X-Business-Id"],
+  }),
+);
 app.use(express.json());
 
 app.get("/health", (req: Request, res: Response) => {
