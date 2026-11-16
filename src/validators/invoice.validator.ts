@@ -27,3 +27,9 @@ export const createSaleSchema = z.object({
 });
 
 export type CreateSaleInput = z.infer<typeof createSaleSchema>;
+
+export const cancelSaleSchema = z.object({
+  reason: z.string().trim().min(1, "Give a reason").max(200),
+});
+
+export type CancelSaleInput = z.infer<typeof cancelSaleSchema>;

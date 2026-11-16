@@ -1,8 +1,9 @@
-import { and, eq, ilike, isNull, or, asc } from "drizzle-orm";
+import { and, eq, ilike, isNull, or, asc, sql } from "drizzle-orm";
 import { db } from "../db/connection.js";
-import { items, stockMovements } from "../db/schema/index.js";
+import { auditLogs, items, stockMovements } from "../db/schema/index.js";
 import { AppError } from "../utils/AppError.js";
 import type {
+  AdjustStockInput,
   CreateItemInput,
   UpdateItemInput,
 } from "../validators/item.validator.js";
@@ -125,4 +126,71 @@ export async function deleteItem(
     .update(items)
     .set({ deletedAt: new Date(), updatedAt: new Date() })
     .where(and(eq(items.id, itemId), eq(items.businessId, businessId)));
+}
+
+export async function adjustStock(
+  businessId: string,
+  userId: string,
+  itemId: string,
+  input: AdjustStockInput,
+): Promise<typeof items.$inferSelect> {
+  if (!UUID_PATTERN.test(itemId)) {
+    throw new AppError(400, "INVALID_ID", "Invalid item id.");
+  }
+  return db.transaction(async (tx) => {
+    const [item] = await tx
+      .select()
+      .from(items)
+      .where(
+        and(
+          eq(items.id, itemId),
+          eq(items.businessId, businessId),
+          isNull(items.deletedAt),
+        ),
+      )
+      .for("update");
+    if (!item) {
+      throw new AppError(404, "ITEM_NOT_FOUND", "Item not found.");
+    }
+    const newQty = item.stockQty + input.change;
+    if (!(newQty >= 0)) {
+      throw new AppError(
+        409,
+        "INSUFFICIENT_STOCK",
+        `Only ${item.stockQty} left of ${item.designNo}.`,
+      );
+    }
+    await tx.insert(stockMovements).values({
+      businessId,
+      itemId,
+      qtyChange: input.change,
+      reason: "adjustment",
+      createdBy: userId,
+    });
+    const [row] = await tx
+      .update(items)
+      .set({
+        stockQty: sql`${items.stockQty} + ${input.change}`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(items.id, itemId), eq(items.businessId, businessId)))
+      .returning();
+    if (!row) {
+      throw new Error("adjustStock: update returned no row.");
+    }
+    await tx.insert(auditLogs).values({
+      businessId,
+      userId,
+      tableName: "items",
+      recordId: itemId,
+      action: "update",
+      oldData: { stockQty: item.stockQty },
+      newData: {
+        stockQty: row.stockQty,
+        change: input.change,
+        note: input.note,
+      },
+    });
+    return row;
+  });
 }

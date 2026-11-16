@@ -18,3 +18,15 @@ export const updateItemSchema = itemFields
 
 export type CreateItemInput = z.infer<typeof createItemSchema>;
 export type UpdateItemInput = z.infer<typeof updateItemSchema>;
+
+export const adjustStockSchema = z.object({
+  change: z
+    .number()
+    .int()
+    .min(-1_000_000)
+    .max(1_000_000)
+    .refine((n) => n !== 0, { message: "Change cannot be 0." }),
+  note: z.string().trim().min(1).max(200),
+});
+
+export type AdjustStockInput = z.infer<typeof adjustStockSchema>;

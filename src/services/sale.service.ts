@@ -24,7 +24,10 @@ import { nextSerial, type Tx } from "./counter.service.js";
 import { AppError } from "../utils/AppError.js";
 import { getBusiness } from "./business.service.js";
 import { getContact } from "./contact.service.js";
-import type { CreateSaleInput } from "../validators/invoice.validator.js";
+import type {
+  CancelSaleInput,
+  CreateSaleInput,
+} from "../validators/invoice.validator.js";
 import {
   buildLines,
   computeTotals,
@@ -127,9 +130,9 @@ export async function loadParties(
 }> {
   const business = await getBusiness(businessId);
   const billedTo = await getContact(businessId, billedToId);
-  if (
-    !(billedTo.contactType === "customer" || billedTo.contactType === "both")
-  ) {
+  if (!(
+    billedTo.contactType === "customer" || billedTo.contactType === "both"
+  )) {
     throw new AppError(
       400,
       "NOT_A_CUSTOMER",
@@ -430,4 +433,105 @@ export async function listSales(businessId: string, search?: string) {
     )
     .orderBy(desc(invoices.date), desc(invoices.serial))
     .limit(100);
+}
+
+export async function cancelSale(
+  businessId: string,
+  userId: string,
+  invoiceId: string,
+  input: CancelSaleInput,
+): Promise<typeof invoices.$inferSelect> {
+  if (!UUID_PATTERN.test(invoiceId)) {
+    throw new AppError(400, "INVALID_ID", "Invalid invoice id.");
+  }
+  return db.transaction(async (tx) => {
+    const [invoice] = await tx
+      .select()
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.id, invoiceId),
+          eq(invoices.businessId, businessId),
+          eq(invoices.docType, "sale"),
+        ),
+      )
+      .for("update");
+    if (!invoice) {
+      throw new AppError(404, "INVOICE_NOT_FOUND", "Invoice not found.");
+    }
+    if (invoice.status === "cancelled") {
+      throw new AppError(
+        409,
+        "ALREADY_CANCELLED",
+        `Bill ${invoice.invoiceNo} is already cancelled.`,
+      );
+    }
+    const lines = await tx
+      .select({ itemId: invoiceLines.itemId, qty: invoiceLines.qty })
+      .from(invoiceLines)
+      .where(
+        and(
+          eq(invoiceLines.invoiceId, invoiceId),
+          eq(invoiceLines.businessId, businessId),
+        ),
+      );
+    for (const line of lines) {
+      await tx.insert(stockMovements).values({
+        businessId,
+        itemId: line.itemId,
+        invoiceId,
+        qtyChange: line.qty,
+        reason: "cancel",
+        createdBy: userId,
+      });
+      await tx
+        .update(items)
+        .set({
+          stockQty: sql`${items.stockQty} + ${line.qty}`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(items.id, line.itemId), eq(items.businessId, businessId)),
+        );
+    }
+    if (invoice.grandTotal > 0) {
+      await tx.insert(ledgerEntries).values({
+        businessId,
+        contactId: invoice.billedToContactId,
+        entryType: "cancel",
+        invoiceId,
+        date: invoice.date,
+        debit: 0,
+        credit: invoice.grandTotal,
+        narration: `Cancelled sale bill ${invoice.invoiceNo}`,
+        createdBy: userId,
+      });
+    }
+    const [row] = await tx
+      .update(invoices)
+      .set({
+        status: "cancelled",
+        cancelledAt: new Date(),
+        cancelledBy: userId,
+        cancelReason: input.reason,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(eq(invoices.id, invoiceId), eq(invoices.businessId, businessId)),
+      )
+      .returning();
+    if (!row) {
+      throw new Error("cancelSale: update returned no row.");
+    }
+    await tx.insert(auditLogs).values({
+      businessId,
+      userId,
+      tableName: "invoices",
+      recordId: invoiceId,
+      action: "cancel",
+      oldData: { status: "active" },
+      newData: { status: "cancelled", reason: input.reason },
+    });
+    return row;
+  });
 }
